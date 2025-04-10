@@ -1,6 +1,6 @@
+import dataclasses
 import json
 import logging
-import dataclasses
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
@@ -87,7 +87,7 @@ class KlueStsDataset:
             dtype=torch.long,
         )
         labels = torch.tensor(feature.label, dtype=torch.float)
-        return (input_ids, attn_mask, token_type_ids, labels)
+        return input_ids, attn_mask, token_type_ids, labels
 
     def _create_examples(self, data):
         examples = [
@@ -95,7 +95,7 @@ class KlueStsDataset:
                 guid=d["guid"],
                 text_a=d["sentence1"],
                 text_b=d["sentence2"],
-                label=d["labels"]["real-label"],
+                label=d["labels"]["binary-label"],
                 binary_label=d["labels"]["binary-label"],
             )
             for d in self.data
@@ -103,7 +103,7 @@ class KlueStsDataset:
         return examples
 
     def _convert_features(
-        self, examples: List[KlueStsInputExample]
+            self, examples: List[KlueStsInputExample]
     ) -> List[KlueStsInputFeatures]:
         return convert_examples_to_features(
             examples,
@@ -115,11 +115,11 @@ class KlueStsDataset:
 
 
 def convert_examples_to_features(
-    examples: List[KlueStsInputExample],
-    tokenizer: PreTrainedTokenizer,
-    max_length: Optional[int] = None,
-    label_list=None,
-    output_mode=None,
+        examples: List[KlueStsInputExample],
+        tokenizer: PreTrainedTokenizer,
+        max_length: Optional[int] = None,
+        label_list=None,
+        output_mode=None,
 ):
     if max_length is None:
         max_length = tokenizer.model_max_length
