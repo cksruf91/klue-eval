@@ -1,6 +1,6 @@
 import sys
 import time
-from typing import Iterable, Any, Self
+from typing import Iterable, Any
 
 
 class ProgressBar:
@@ -38,7 +38,7 @@ class ProgressBar:
         self._start = time.time()
         self._graph = graph
 
-    def __iter__(self) -> Self:
+    def __iter__(self):
         self._start = time.time()
         self._iter = iter(self.iterable)
         return self

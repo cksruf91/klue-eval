@@ -9,5 +9,5 @@ def read_json(file_path):
 
 
 def read_parquet(file_path):
-    df = pl.read_parquet(file_path).sample(10)
+    df = pl.read_parquet(file_path)
     return df.to_dicts()

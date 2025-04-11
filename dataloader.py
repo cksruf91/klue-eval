@@ -18,4 +18,4 @@ class KlueStsDataLoaderFetcher(object):
     def get_dataloader(self, file_path: str, batch_size: int, **kwargs):
         data = read_json(file_path) if file_path.endswith(".json") else read_parquet(file_path)
         dataset = KlueStsDataset(data, self.tokenizer, self.max_length)
-        return DataLoader(dataset, batch_size=batch_size, shuffle=False, **kwargs)
+        return DataLoader(dataset, batch_size=batch_size, **kwargs)
