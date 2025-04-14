@@ -4,35 +4,13 @@ from pathlib import Path
 import torch
 from huggingface_hub import hf_hub_download
 
+from common.data import DataPath
+from common.progress_bar import ProgressBar
 from src.iterator import KlueStsDataSet
 # from dataloader import KlueStsDataLoaderFetcher
 from src.model import RoBertaModel, Summary
-from src.progress_bar import ProgressBar
 
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
-
-class DataPath:
-    REPO_ID = "klue/klue"
-    LOCAL_DIR = Path("klue-sts-v1.1/hub")
-    TRAIN_FILE = 'sts/train-00000-of-00001.parquet'
-    TEST_FILE = 'sts/validation-00000-of-00001.parquet'
-
-    @property
-    def local_dir(self) -> str:
-        return str(self.LOCAL_DIR)
-
-    @property
-    def files(self) -> list[str]:
-        return [self.TRAIN_FILE, self.TEST_FILE]
-
-    @property
-    def local_train_file(self) -> Path:
-        return self.LOCAL_DIR.joinpath(self.TRAIN_FILE)
-
-    @property
-    def local_test_file(self) -> Path:
-        return self.LOCAL_DIR.joinpath(self.TEST_FILE)
 
 
 class Trainer:
