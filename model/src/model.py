@@ -49,7 +49,7 @@ class RoBertaModel(nn.Module):
         )
 
         self.loss = nn.BCEWithLogitsLoss()
-        self.optimizer = torch.optim.AdamW(self.parameters(), lr=1e-5, weight_decay=1e-2)
+        self.optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
 
     @torch.inference_mode()
     def embedding(self, text: str) -> list[float]:
