@@ -1,42 +1,34 @@
-from concurrent.futures import ThreadPoolExecutor
-
 import numpy as np
 
 from common.data import KlueDataLoader
-from llm.client import OpenAIClient
+from model.src.model import RoBertaModel
 
 
 class Evaluator:
     def __init__(self):
         self.data_loader = KlueDataLoader(sample=False)
-        self.client = OpenAIClient(model="text-embedding-3-small")
+        self.model = RoBertaModel()
 
     def __repr__(self):
-        return f"Evaluator({self.client.model})"
+        return f"Evaluator({self.model.repo})"
 
     def run(self):
         _, test = self.data_loader.train_test()
         similarities = []
         labels = []
 
-        print("get similarity...")
-        with ThreadPoolExecutor(10) as executor:
-            results = list(executor.map(self.process_data, test))
-            for similarity, label in results:
-                similarities.append(similarity)
-                labels.append(label)
+        for data in test:
+            emb1 = self.model.embedding(data.sentence1)[0]
+            emb2 = self.model.embedding(data.sentence2)[0]
+            similarity = max(self.cosine_similarity(emb1, emb2), 0.0)
+            label = data.real_label
+            similarities.append(similarity)
+            labels.append(label)
 
         print(f"\ncosine similarity:\t{similarities[: 5]}")
         print(f"labels:\t\t\t\t{labels[: 5]}")
 
         print(f"person correlation: {self.pearson_correlation(similarities, labels)}")
-        # 0.735812685645248, 0.7354876802957254, 0.7355130002574058
-
-    def process_data(self, data):
-        emb1 = self.client.embedding(text=data.sentence1)
-        emb2 = self.client.embedding(text=data.sentence2)
-        similarity = max(self.cosine_similarity(emb1, emb2), 0.0)
-        return similarity, data.real_label
 
     @staticmethod
     def cosine_similarity(emb1: list[float], emb2: list[float]) -> float:

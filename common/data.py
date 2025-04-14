@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Iterable, Tuple
 
 import polars as pl
+from huggingface_hub import hf_hub_download
 
 
 class DataPath:
@@ -56,6 +57,14 @@ class KlueDataLoader:
         self.path = DataPath()
         self.sample = sample
 
+    def train_dict(self) -> list[dict]:
+        train = self.read_parquet(self.path.local_train_file)
+        return train.to_dicts()
+
+    def test_dict(self) -> list[dict]:
+        test = self.read_parquet(self.path.local_test_file)
+        return test.to_dicts()
+
     def train_test_dataframe(self) -> Tuple[pl.DataFrame, pl.DataFrame]:
         train = self.read_parquet(self.path.local_train_file)
         test = self.read_parquet(self.path.local_test_file)
@@ -75,3 +84,13 @@ class KlueDataLoader:
         if self.sample:
             df = df.head(10)
         return df
+
+    def setup(self):
+        for name in self.path.files:
+            result = hf_hub_download(
+                repo_id=self.path.REPO_ID,
+                repo_type="dataset",
+                filename=name,
+                local_dir=self.path.local_dir,
+            )
+            print(result)
