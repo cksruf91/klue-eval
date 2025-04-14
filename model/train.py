@@ -13,10 +13,10 @@ DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 class SemanticTextSimilarityTrainer:
     def __init__(self):
-        self.data_loader = KlueDataLoader(sample=True)
+        self.data_loader = KlueDataLoader(sample=False)
         self.model = RoBertaModel().to(DEVICE)
         print(self.model)
-        self.epoch = 2
+        self.epoch = 100
         self.log_file = Path('log.txt')
 
     def logger(self, message: str):
