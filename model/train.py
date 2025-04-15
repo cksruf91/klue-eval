@@ -24,27 +24,35 @@ class SemanticTextSimilarityTrainer:
 
     def run(self):
         train_loader = (
-            KlueStsDataSet(tokenizer=self.model.tokenizer)
+            KlueStsDataSet(tokenizer=self.model.tokenizer, train=True)
             .fetch(self.data_loader.train_dict())
-            .get_dataloader(batch_size=16, shuffle=True, num_workers=0)
+            .get_dataloader(batch_size=64, shuffle=True, num_workers=0)
         )
         test_loader = (
             KlueStsDataSet(tokenizer=self.model.tokenizer)
             .fetch(self.data_loader.test_dict())
-            .get_dataloader(batch_size=16, shuffle=False, num_workers=0)
+            .get_dataloader(batch_size=64, shuffle=False, num_workers=0)
         )
 
         summary = Summary()
         test_summary = Summary()
+        best = 0
         self.logger('train start : ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' -' * 50)
         for e in range(self.epoch):
+            self.model.train()
             for data, label in ProgressBar(train_loader):
                 output, loss, labels = self.model(**data, labels=label, train=True)
                 summary.update(loss, output, labels)
             train_report = summary.flush()
+    
             with torch.no_grad():
+                self.model.eval()
                 for data, label in ProgressBar(test_loader, graph=False):
                     output, loss, labels = self.model(**data, labels=label, train=False)
                     test_summary.update(loss, output, labels)
+                f1_score = test_summary.get_f1_score()
+                if f1_score > best:
+                    best = f1_score
+                    self.model.save(Path('model/checkpoint/model.zip'))
                 report = test_summary.flush()
             self.logger(f'epoch: {e + 1:03d} ' + train_report + ' | test ' + report)

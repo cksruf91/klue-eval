@@ -49,10 +49,12 @@ class KlueStsInputData:
 
 
 class KlueStsDataSet(Dataset):
-    def __init__(self, tokenizer: PreTrainedTokenizer, max_seq_length: int = None):
+    def __init__(self, tokenizer: PreTrainedTokenizer, train: bool = False, max_seq_length: int = None):
         self.tokenizer = tokenizer
+        self.train = train
         self.max_seq_length = max_seq_length
         self.data: list[KlueStsInputData] = []
+        self.mask_id = self.tokenizer.mask_token_id
 
     def fetch(self, data: list[dict]):
         """ Fetches the data from the dataset. """
@@ -63,9 +65,16 @@ class KlueStsDataSet(Dataset):
         """ Collects the data into a batch. """
         sentence = [d[0] for d in data]
         label = [[d[1]] for d in data]
-        sentence = self.tokenizer(sentence, padding='max_length', return_tensors='pt')
+        sentence = self.tokenizer(sentence, padding='longest', return_tensors='pt').to(DEVICE)
         label = torch.tensor(label, dtype=torch.float32).to(DEVICE)
+        if self.train:
+            sentence = self._dynamic_masking(sentence)
         return sentence, label
+    
+    def _dynamic_masking(self, tokens):
+        rand = torch.rand_like(tokens['input_ids'], dtype=torch.float16)
+        tokens['input_ids'] = torch.where(rand > 0.9, self.mask_id, tokens['input_ids']) * tokens['attention_mask']
+        return tokens
 
     def __len__(self):
         return len(self.data)
@@ -76,7 +85,7 @@ class KlueStsDataSet(Dataset):
         Args:
             index (int): Index of the data point to retrieve.
         """
-        if torch.rand(1) > 0.5:
+        if self.train and (torch.rand(1) > 0.5):
             sentence = self.data[index].sentence2 + '[SEP]' + self.data[index].sentence1
         else:
             sentence = self.data[index].sentence1 + '[SEP]' + self.data[index].sentence2

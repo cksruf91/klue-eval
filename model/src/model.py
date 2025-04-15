@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.metrics import f1_score
+from pathlib import Path
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 
 
@@ -19,13 +20,18 @@ class Summary:
             torch.gt(output, 0.5).int().cpu().tolist()
         )
         self.labels.extend(labels.cpu().tolist())
+    
+    def get_f1_score(self):
+        return f1_score(
+            y_true=self.labels,
+            y_pred=self.pred,
+        )
 
     def flush(self):
         loss = np.mean(self.loss)
         f1 = f1_score(
             y_true=self.labels,
             y_pred=self.pred,
-            average='macro',
         )
         report = f"loss: {loss: 1.3f}, f1_score: {f1: 1.3f}"
         self.epoch += 1
@@ -45,10 +51,12 @@ class RoBertaModel(nn.Module):
         self.config = AutoConfig.from_pretrained(self.repo)
 
         self.classifier = nn.Sequential(
-            torch.nn.Linear(self.config.hidden_size, 1, bias=False),
+            nn.Dropout(0.3),
+            nn.Linear(self.config.hidden_size, 1, bias=False),
+            nn.Sigmoid(),
         )
 
-        self.loss = nn.BCEWithLogitsLoss()
+        self.loss = nn.BCELoss()
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
 
     @torch.inference_mode()
@@ -59,6 +67,7 @@ class RoBertaModel(nn.Module):
 
     def _back_propagation(self, loss):
         loss.backward()  # 역전파를 통해 그라디언트 계산
+        nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0, norm_type=2.0, )
         self.optimizer.step()  # 파라미터 업데이트
         self.optimizer.zero_grad()  # 기존 그라디언트 초기화
 
@@ -69,3 +78,11 @@ class RoBertaModel(nn.Module):
         if train:
             self._back_propagation(loss)
         return output, loss, labels
+
+    def save(self, save_dir: Path):
+        torch.save(self, save_dir)
+    
+    def load(self, save_dir: Path, device: torch.device):
+        self.load_state_dict(
+            torch.load(save_dir, map_location=device)
+        )
