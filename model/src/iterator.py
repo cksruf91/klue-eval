@@ -44,7 +44,7 @@ class KlueStsInputData:
                 source=d['source'],
                 sentence1=d['sentence1'],
                 sentence2=d['sentence2'],
-                label=d['labels']['binary-label'],
+                label=d['labels']['real-label'],
             )
 
 
@@ -70,7 +70,7 @@ class KlueStsDataSet(Dataset):
         if self.train:
             sentence = self._dynamic_masking(sentence)
         return sentence, label
-    
+
     def _dynamic_masking(self, tokens):
         rand = torch.rand_like(tokens['input_ids'], dtype=torch.float16)
         tokens['input_ids'] = torch.where(rand > 0.9, self.mask_id, tokens['input_ids']) * tokens['attention_mask']

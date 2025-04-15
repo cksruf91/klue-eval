@@ -17,6 +17,8 @@ class SemanticTextSimilarityTrainer:
         self.model = RoBertaModel().to(DEVICE)
         self.epoch = 100
         self.log_file = Path('log.txt')
+        self.checkpoint = Path('model/checkpoint/model.zip')
+        self.checkpoint.parent.mkdir(parents=True, exist_ok=True)
 
     def logger(self, message: str):
         print(message)
@@ -44,15 +46,15 @@ class SemanticTextSimilarityTrainer:
                 output, loss, labels = self.model(**data, labels=label, train=True)
                 summary.update(loss, output, labels)
             train_report = summary.flush()
-    
+
             with torch.no_grad():
                 self.model.eval()
                 for data, label in ProgressBar(test_loader, graph=False):
                     output, loss, labels = self.model(**data, labels=label, train=False)
                     test_summary.update(loss, output, labels)
-                f1_score = test_summary.get_f1_score()
+                f1_score = test_summary.get_score()
                 if f1_score > best:
                     best = f1_score
-                    self.model.save(Path('model/checkpoint/model.zip'))
+                    self.model.save(self.checkpoint)
                 report = test_summary.flush()
             self.logger(f'epoch: {e + 1:03d} ' + train_report + ' | test ' + report)

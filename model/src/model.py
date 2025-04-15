@@ -1,8 +1,9 @@
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.metrics import f1_score
-from pathlib import Path
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 
 
@@ -17,11 +18,14 @@ class Summary:
     def update(self, loss: torch.Tensor, output: torch.Tensor, labels: torch.Tensor):
         self.loss.append(loss.item())
         self.pred.extend(
-            torch.gt(output, 0.5).int().cpu().tolist()
+            torch.gt(output, 2.5).reshape(-1).int().cpu().tolist()
         )
-        self.labels.extend(labels.cpu().tolist())
-    
-    def get_f1_score(self):
+        self.labels.extend(
+            torch.gt(labels, 2.5).reshape(-1).int().cpu().tolist()
+        )
+        # self.labels.extend(labels.cpu().tolist())
+
+    def get_score(self):
         return f1_score(
             y_true=self.labels,
             y_pred=self.pred,
@@ -29,10 +33,7 @@ class Summary:
 
     def flush(self):
         loss = np.mean(self.loss)
-        f1 = f1_score(
-            y_true=self.labels,
-            y_pred=self.pred,
-        )
+        f1 = self.get_score()
         report = f"loss: {loss: 1.3f}, f1_score: {f1: 1.3f}"
         self.epoch += 1
         self.loss = []
@@ -53,10 +54,10 @@ class RoBertaModel(nn.Module):
         self.classifier = nn.Sequential(
             nn.Dropout(0.3),
             nn.Linear(self.config.hidden_size, 1, bias=False),
-            nn.Sigmoid(),
         )
 
-        self.loss = nn.BCELoss()
+        # self.loss = nn.BCELoss()
+        self.loss = nn.MSELoss()
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
 
     @torch.inference_mode()
@@ -81,7 +82,7 @@ class RoBertaModel(nn.Module):
 
     def save(self, save_dir: Path):
         torch.save(self, save_dir)
-    
+
     def load(self, save_dir: Path, device: torch.device):
         self.load_state_dict(
             torch.load(save_dir, map_location=device)
